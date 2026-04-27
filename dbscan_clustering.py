@@ -3,12 +3,17 @@ import pandas as pd
 import seaborn as sns
 from sklearn.cluster import DBSCAN
 import matplotlib.pyplot as plt
+from sklearn.neighbors import NearestNeighbors
+from sklearn.metrics import davies_bouldin_score
+import numpy as np
 
 # Folder output
 os.makedirs('output', exist_ok=True)
 
 # Baca dataset
 df = pd.read_csv('dataset/viirs-snpp_2024_Indonesia.csv')
+df['acq_date'] = pd.to_datetime(df['acq_date'], errors='coerce')
+df['month'] = df['acq_date'].dt.to_period('M').astype(str)
 
 # Preprocessing: Konversi Confidence ke Numerik untuk analisis statistik
 # l (low)=1, n (nominal)=2, h (high)=3
@@ -18,9 +23,44 @@ df['conf_score'] = df['confidence'].map(mapping)
 # Lihat kolom yang tersedia dari dataset
 print('Kolom yang tersedia:', df.columns.tolist())
 
+
+# ANALISIS TEMPORAL BULANAN
+monthly_hotspot = df.groupby('month').size().reset_index(name='titik_count')
+monthly_hotspot = monthly_hotspot.sort_values('month')
+
+plt.figure(figsize=(10, 5), dpi=300)
+plt.plot(monthly_hotspot['month'], monthly_hotspot['titik_count'], marker='o')
+plt.title('Tren Jumlah Hotspot per Bulan (VIIRS-SNPP 2024)')
+plt.xlabel('Bulan')
+plt.ylabel('Jumlah Titik')
+plt.xticks(rotation=45)
+plt.grid(True, linestyle='--', alpha=0.5)
+plt.tight_layout()
+plt.savefig('output/tren_hotspot_bulanan.png', dpi=300, bbox_inches='tight')
+plt.close()
+
+monthly_hotspot.to_csv('output/analisis_temporal_bulanan.csv', index=False)
+
+
 # CLUSTERING
 # Menyiapkan data koordinat
 X = df[['latitude', 'longitude']]
+
+k = 5 
+neighbors = NearestNeighbors(n_neighbors=k)
+neighbors_fit = neighbors.fit(X)
+distances, indices = neighbors_fit.kneighbors(X)
+
+k_distances = np.sort(distances[:, k-1], axis=0)
+
+plt.figure(figsize=(10, 5), dpi=300)
+plt.plot(k_distances)
+plt.title('K-Distance Plot untuk Penentuan Epsilon (eps)')
+plt.xlabel('Titik Data (diurutkan berdasarkan jarak)')
+plt.ylabel(f'{k}-th Nearest Neighbor Distance')
+plt.grid(True, linestyle='--')
+plt.savefig('output/k_distance_plot.png')
+plt.close()
 
 # Menjalankan DBSCAN
 db = DBSCAN(eps=0.1, min_samples=5).fit(X)
@@ -32,6 +72,19 @@ df['cluster'] = db.labels_
 print('Jumlah klaster yang ditemukan:', len(set(db.labels_)) - (1 if -1 in db.labels_ else 0))
 print('Jumlah titik yang dianggap noise (-1):', list(db.labels_).count(-1))
 print(df[['latitude', 'longitude', 'cluster']].head(10))
+
+cluster_mask = df['cluster'] != -1
+cluster_unique = df.loc[cluster_mask, 'cluster'].nunique()
+
+if cluster_unique > 1:
+    cluster_features = df.loc[cluster_mask, ['latitude', 'longitude']]
+    cluster_labels = df.loc[cluster_mask, 'cluster']
+    davies_bouldin = davies_bouldin_score(cluster_features, cluster_labels)
+
+    print('\nEvaluasi Kualitas Klaster:')
+    print(f'Davies-Bouldin Index (DBI): {davies_bouldin:.4f}')
+else:
+    print('\nEvaluasi Kualitas Klaster dilewati karena jumlah klaster valid kurang dari 2.')
 
 # Simpan hasil clustering
 df.to_csv('output/hasil_cluster_dbscan.csv', index=False)

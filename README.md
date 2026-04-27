@@ -17,19 +17,24 @@ Dalam analisis ini, kolom yang dipilih disesuaikan dengan kebutuhan pemodelan st
 ## 3. Metodologi Analisis
 1.  **Preprocessing:** Konversi data kategori `confidence` menjadi numerik untuk kebutuhan komputasi statistik.
 2.  **Clustering:** Penerapan DBSCAN dengan parameter `eps=0.1` dan `min_samples=5` untuk mengelompokkan titik api yang berdekatan secara geografis.
-3.  **Analisis Statistik:** Agregasi rata-rata `bright_ti4`, `frp`, dan `conf_score` per klaster untuk mengukur tingkat signifikansi dan kepadatan tiap area kebakaran.
-4.  **Korelasi:** Evaluasi hubungan statistik antara suhu kecerahan, energi, dan tingkat keyakinan data menggunakan *Pearson Correlation*.
+3.  **Evaluasi Klaster:** Pengukuran kualitas hasil DBSCAN menggunakan *Davies-Bouldin Index* (DBI).
+4.  **Analisis Temporal:** Ringkasan jumlah hotspot per bulan untuk melihat pola perubahan kejadian sepanjang 2024.
+5.  **Analisis Statistik:** Agregasi rata-rata `bright_ti4`, `frp`, dan `conf_score` per klaster untuk mengukur tingkat signifikansi dan kepadatan tiap area kebakaran.
+6.  **Korelasi:** Evaluasi hubungan statistik antara suhu kecerahan, energi, dan tingkat keyakinan data menggunakan *Pearson Correlation*.
 
 ## 4. Output Analisis
 Program ini menghasilkan file di dalam folder `output/`:
 
 * **CSV Files:**
     * `hasil_cluster_dbscan.csv`: Dataset asli dengan tambahan label klaster untuk setiap titik.
+    * `analisis_temporal_bulanan.csv`: Rekap jumlah hotspot per bulan.
     * `analisis_per_cluster.csv`: Ringkasan statistik (rata-rata suhu, FRP, jumlah titik) per klaster.
     * `matriks_korelasi.csv`: Matriks hubungan antar variabel.
 * **Visualisasi (PNG):**
+    * `tren_hotspot_bulanan.png`: Grafik jumlah hotspot per bulan.
     * `peta_cluster_hotspot.png`: Visualisasi sebaran klaster hotspot di peta Indonesia.
     * `heatmap_korelasi.png`: Matriks korelasi antar variabel untuk melihat kekuatan hubungan data.
+    * `k_distance_plot.png`: Plot k-distance untuk membantu pemilihan parameter `eps` pada DBSCAN.
 
 ---
 *Dibuat untuk keperluan analisis data spasial kebakaran hutan dan lahan.*
