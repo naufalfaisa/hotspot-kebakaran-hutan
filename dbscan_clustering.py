@@ -4,7 +4,11 @@ import seaborn as sns
 from sklearn.cluster import DBSCAN
 import matplotlib.pyplot as plt
 from sklearn.neighbors import NearestNeighbors
-from sklearn.metrics import davies_bouldin_score
+from sklearn.metrics import (
+    calinski_harabasz_score,
+    davies_bouldin_score,
+    silhouette_score,
+)
 import numpy as np
 
 # Folder output
@@ -63,7 +67,7 @@ plt.savefig('output/k_distance_plot.png')
 plt.close()
 
 # Menjalankan DBSCAN
-db = DBSCAN(eps=0.1, min_samples=5).fit(X)
+db = DBSCAN(eps=0.1, min_samples=100).fit(X)
 
 # Tambahkan hasil label klaster ke dalam dataframe
 df['cluster'] = db.labels_
@@ -80,9 +84,24 @@ if cluster_unique > 1:
     cluster_features = df.loc[cluster_mask, ['latitude', 'longitude']]
     cluster_labels = df.loc[cluster_mask, 'cluster']
     davies_bouldin = davies_bouldin_score(cluster_features, cluster_labels)
+    silhouette = silhouette_score(
+        cluster_features,
+        cluster_labels,
+        sample_size=min(10000, len(cluster_features))
+    )
+    calinski_harabasz = calinski_harabasz_score(cluster_features, cluster_labels)
+
+    evaluation_results = pd.DataFrame([
+        {'metode': 'Davies-Bouldin Index', 'nilai': davies_bouldin},
+        {'metode': 'Silhouette Score', 'nilai': silhouette},
+        {'metode': 'Calinski-Harabasz Index', 'nilai': calinski_harabasz},
+    ])
 
     print('\nEvaluasi Kualitas Klaster:')
     print(f'Davies-Bouldin Index (DBI): {davies_bouldin:.4f}')
+    print(f'Silhouette Score: {silhouette:.4f}')
+    print(f'Calinski-Harabasz Index: {calinski_harabasz:.4f}')
+    evaluation_results.to_csv('output/hasil_evaluasi_klaster.csv', index=False)
 else:
     print('\nEvaluasi Kualitas Klaster dilewati karena jumlah klaster valid kurang dari 2.')
 
